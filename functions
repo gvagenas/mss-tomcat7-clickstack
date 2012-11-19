@@ -1,0 +1,55 @@
+# -*-shell-script-*-
+
+. "$plugin_dir/java/functions"
+
+catalina_base=$app_dir/server
+tomcat7_dir=$app_dir/tomcat7
+
+create_app_skel() {
+    echo "Creating application skeleton at $app_dir"
+    chmod 770 $app_dir
+    mkdir -m 770 $app_dir/tmp
+    mkdir -m 770 $app_dir/log
+    mkdir -m 770 $app_dir/work
+    ln -s $log_dir/current $app_dir/log/current
+}
+
+install_tomcat7() {
+    echo "Installing tomcat7"
+    mkdir $tomcat7_dir
+    unzip -qd $tomcat7_dir $plugin_dir/lib/tomcat7.zip
+    chmod 755 $tomcat7_dir/bin/catalina.sh
+}
+
+install_server_config() {
+    echo "Installing server config"
+    mkdir -p -m 770 $catalina_base
+    cp -rf $plugin_dir/server/* $catalina_base
+}
+
+install_app() {
+    echo "Copying application files to $catalina_base/webapps/ROOT"
+    mkdir -p -m 770 $catalina_base/webapps/ROOT
+    mkdir -p -m 770 $catalina_base/server/work/Catalina/localhost/_
+    unzip -qd $catalina_base/webapps $pkg_dir/app.war
+}
+
+write_config() {
+    _config="$control_dir/config"
+    echo "Writing configuration to $_config"
+    java=$(find_java)
+    echo "Using Java at $java"
+    echo "app_dir=$app_dir" >> $_config
+    echo "port=$app_port" >> $_config
+    echo "java=$java" >> $_config
+    echo "catalina_opts=-Dport.http=$app_port" >> $_config
+    echo "catalina_home=$tomcat7_dir" >> $_config
+    echo "catalina_base=$catalina_base" >> $_config
+    echo "app_tmp=$app_dir/tmp" >> $_config
+}
+
+write_control() {
+    echo "Writing control scripts to $control_dir"
+    install -m 550 $plugin_dir/control/start $control_dir
+    install -m 550 $plugin_dir/control/stats-appstat $control_dir
+}
